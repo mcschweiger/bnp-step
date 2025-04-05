@@ -5,6 +5,11 @@ Main module for BNP-Step.
 
 This module serves as the entry point for running BNP-Step analysis.
 """
+# Import all functions from other .jl files in the ./bnp-step directory
+includet("bnpanalysis.jl")
+includet("bnpinputs.jl")
+includet("bnpsampler.jl")
+includet("distribs.jl")
 
 using BNPAnalysis
 using Random
@@ -14,11 +19,6 @@ using StatsBase  # For statistical operations
 using Plots      # For visualization
 using Distributions  # For sampling distributions
 
-# Import all functions from other .jl files in the ./bnp-step directory
-include("bnpanalysis.jl")
-include("bnpinputs.jl")
-include("bnpsampler.jl")
-include("distribs.jl")
 
 """
     struct BNPStep

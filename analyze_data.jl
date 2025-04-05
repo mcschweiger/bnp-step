@@ -2,9 +2,9 @@ include("bnpstep.jl")
 include("bnpinputs.jl")
 include("bnpanalysis.jl")
 
-using BNPStep
-using BNPInputs
-using BNPAnalysis
+using .BNPStep
+using .BNPInputs
+using .BNPAnalysis
 using DelimitedFiles
 using JLD2  # Moved to the top for consistency
 
