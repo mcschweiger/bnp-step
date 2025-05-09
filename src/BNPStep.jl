@@ -5,13 +5,15 @@ Main module for BNP-Step.
 
 This module serves as the entry point for running BNP-Step analysis.
 """
-# Import all functions from other .jl files in the ./bnp-step directory
-includet("bnpanalysis.jl")
-includet("bnpinputs.jl")
-includet("bnpsampler.jl")
-includet("distribs.jl")
 
-using BNPAnalysis
+include("BNPAnalysis.jl")
+using ..BNPAnalysis
+include("BNPInputs.jl")
+using ..BNPInputs
+include("BNPSampler.jl")
+using ..BNPSampler
+
+
 using Random
 using LinearAlgebra
 using DelimitedFiles  # Required for reading files
@@ -41,7 +43,7 @@ Defines the BNPStep structure for running BNP-Step analysis.
 - `scale_factor::Float64`: Controls how fast the temperature drops off.
 - `rng::Random.AbstractRNG`: Random number generator.
 """
-struct BNPStep
+struct BNP_Step
     chi::Float64
     dt_ref::Float64
     h_ref::Float64
@@ -79,7 +81,7 @@ Constructor for the BNPStep structure with default values.
 - `scale_factor::Float64`: Default is 1.25.
 - `seed::Union{Int, Nothing}`: Default is nothing.
 """
-function BNPStep(; chi=0.028, dt_ref=100.0, h_ref=10.0, psi=0.0028, F_ref=0.0, phi=1.0, eta_ref=10.0,
+function BNP_Step(; chi=0.028, dt_ref=100.0, h_ref=10.0, psi=0.0028, F_ref=0.0, phi=1.0, eta_ref=10.0,
                   gamma=1.0, B_max=50, load_initialization="prior", use_annealing=false,
                   init_temperature=2250, scale_factor=1.25, seed=nothing)
     rng = isnothing(seed) ? Random.GLOBAL_RNG : MersenneTwister(seed)
