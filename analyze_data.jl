@@ -19,7 +19,7 @@ function main()
     data = load_csv_data(filepath, has_timepoints=true)
 
     # Initialize BNPStep object
-    step = BNPStep(
+    step = BNP_Step(
         chi=0.028,
         dt_ref=100.0,
         h_ref=10.0,
@@ -29,7 +29,7 @@ function main()
         eta_ref=10.0,
         gamma=1.0,
         B_max=50,
-        load_initialization="prior",
+        load_initialization=:prior,
         use_annealing=true,
         init_temperature=2250,
         scale_factor=1.25,

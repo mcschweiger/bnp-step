@@ -13,10 +13,7 @@ module BNPInputs
 using CSV
 using DataFrames
 
-include("utils/clean_parse.jl")  # Split out helper functions for clarity
 
-export load_data_garcia, load_data_txt, load_data_csv,
-       load_data_HMM, load_data_expt, load_data_kv
 
 """
     load_data_garcia(filename::String, data_format::String; path::Union{Nothing, String}=nothing)
@@ -30,9 +27,9 @@ Loads a specific trace from a CSV file based on the given model type and iterati
 
 # Returns
 A dictionary containing:
-- `data::Vector{Float64}`: The extracted trace values.
-- `times::Union{Vector{Float64}, Nothing}`: The corresponding time points.
-- `nu_vec::Union{Vector{Float64}, Nothing}`: The associated nu values (if present).
+- `data::Vector{Float32}`: The extracted trace values.
+- `times::Union{Vector{Float32}, Nothing}`: The corresponding time points.
+- `nu_vec::Union{Vector{Float32}, Nothing}`: The associated nu values (if present).
 - `ground_truths::Nothing`
 - `parameters::Nothing`
 
@@ -88,8 +85,8 @@ Data loader for generic data sets in `.txt` format.
 
 # Returns
 A dictionary containing:
-- `data::Vector{Float64}`: The extracted data values.
-- `times::Union{Vector{Float64}, Nothing}`: The corresponding time points (if present).
+- `data::Vector{Float32}`: The extracted data values.
+- `times::Union{Vector{Float32}, Nothing}`: The corresponding time points (if present).
 - `ground_truths::Nothing`
 - `parameters::Nothing`
 """
@@ -101,24 +98,24 @@ function load_data_txt(filename::String, has_timepoints::Bool; path::Union{Nothi
     dataset = Dict{String, Any}()
 
     if has_timepoints
-        data = Float64[]
-        times = Float64[]
+        data = Float32[]
+        times = Float32[]
         # Read file line by line
         open(full_path, "r") do f
             for line in eachline(f)
                 split_data = split(line, ",")
-                push!(times, parse(Float64, split_data[1]))
-                push!(data, parse(Float64, split_data[2]))
+                push!(times, parse(Float32, split_data[1]))
+                push!(data, parse(Float32, split_data[2]))
             end
         end
         dataset["data"] = data
         dataset["times"] = times
     else
-        data = Float64[]
+        data = Float32[]
         # Read file line by line
         open(full_path, "r") do f
             for line in eachline(f)
-                push!(data, parse(Float64, line))
+                push!(data, parse(Float32, line))
             end
         end
         dataset["data"] = data
@@ -145,9 +142,9 @@ Data loader for generic data sets in `.csv` format.
 
 # Returns
 A dictionary containing:
-- `data::Vector{Float64}`: The extracted data values.
-- `times::Union{Vector{Float64}, Nothing}`: The corresponding time points (if present).
-- `nu_vec::Union{Vector{Float64}, Nothing}`: The associated nu values (if present).
+- `data::Vector{Float32}`: The extracted data values.
+- `times::Union{Vector{Float32}, Nothing}`: The corresponding time points (if present).
+- `nu_vec::Union{Vector{Float32}, Nothing}`: The associated nu values (if present).
 - `ground_truths::Nothing`
 - `parameters::Nothing`
 """
@@ -174,9 +171,9 @@ function load_data_csv(filename::String, has_timepoints::Bool; path::Union{Nothi
         nu_vec = data_np[:, 3]
 
         # Build dictionary for output
-        dataset["data"] = Float64.(data)
-        dataset["times"] = Float64.(times)
-        dataset["nu_vec"] = Float64.(nu_vec)
+        dataset["data"] = Float32.(data)
+        dataset["times"] = Float32.(times)
+        dataset["nu_vec"] = Float32.(nu_vec)
     else
         # Read CSV file into a DataFrame
         df = CSV.File(full_path, header=false) |> DataFrame
@@ -186,9 +183,9 @@ function load_data_csv(filename::String, has_timepoints::Bool; path::Union{Nothi
         nu_vec = data_np[:, 2]
 
         # Build dictionary for output
-        dataset["data"] = Float64.(data)
+        dataset["data"] = Float32.(data)
         dataset["times"] = nothing
-        dataset["nu_vec"] = Float64.(nu_vec)
+        dataset["nu_vec"] = Float32.(nu_vec)
     end
 
     dataset["ground_truths"] = nothing
@@ -201,7 +198,7 @@ end
 """
     load_data_HMM(filename::String; path::Union{Nothing, String}=nothing)
 
-Data loader for HMM-style data sets, as given in "An accurate probabilistic step finder for time-series analysis".
+Data loader for HMM-style data sets, as given in "An accurate probabilistic step finder for timf-series analysis".
 
 # Arguments
 - `filename::String`: Name of the file to be loaded (without extension).
@@ -209,9 +206,9 @@ Data loader for HMM-style data sets, as given in "An accurate probabilistic step
 
 # Returns
 A dictionary containing:
-- `data::Vector{Float64}`: The extracted data values.
-- `times::Vector{Float64}`: The corresponding time points.
-- `ground_truths::Dict{String, Vector{Float64}}`: Ground truth trajectory data.
+- `data::Vector{Float32}`: The extracted data values.
+- `times::Vector{Float32}`: The corresponding time points.
+- `ground_truths::Dict{String, Vector{Float32}}`: Ground truth trajectory data.
 - `parameters::Dict{String, Any}`: Synthetic data generation parameters.
 """
 function load_data_HMM(filename::String; path::Union{Nothing, String}=nothing)
@@ -239,22 +236,22 @@ function load_data_HMM(filename::String; path::Union{Nothing, String}=nothing)
     num_steps = sum(diff(ground["x"]) .!= 0)
     params["gt_steps"] = num_steps
     params["num_observations"] = length(ground["x"])
-    params["f_back"] = parse(Float64, string(names(df)[3]))
+    params["f_back"] = parse(Float32, string(names(df)[3]))
 
     if length(unique(data_mat[:, 3])) > 2
-        params["h_step"] = parse(Float64, string(names(df)[6]))
-        params["h_step2"] = parse(Float64, string(names(df)[7]))
-        params["h_step3"] = parse(Float64, string(names(df)[8]))
-        params["h_step4"] = parse(Float64, string(names(df)[9]))
-        params["h_step5"] = parse(Float64, string(names(df)[10]))
+        params["h_step"] = parse(Float32, string(names(df)[6]))
+        params["h_step2"] = parse(Float32, string(names(df)[7]))
+        params["h_step3"] = parse(Float32, string(names(df)[8]))
+        params["h_step4"] = parse(Float32, string(names(df)[9]))
+        params["h_step5"] = parse(Float32, string(names(df)[10]))
     else
         params["h_step"] = 0.0
-        params["h_step2"] = parse(Float64, string(names(df)[6]))
+        params["h_step2"] = parse(Float32, string(names(df)[6]))
         params["h_step3"] = nothing
         params["h_step4"] = nothing
         params["h_step5"] = nothing
     end
-    params["eta"] = parse(Float64, string(names(df)[4]))
+    params["eta"] = parse(Float32, string(names(df)[4]))
 
     # Pack everything into a dictionary
     dataset = Dict(
@@ -270,7 +267,7 @@ end
 """
     load_data_expt(filename::String; path::Union{Nothing, String}=nothing)
 
-Data loader for experimental data sets, as given in "An accurate probabilistic step finder for time-series analysis".
+Data loader for experimental data sets, as given in "An accurate probabilistic step finder for timf-series analysis".
 
 # Arguments
 - `filename::String`: Name of the file to be loaded (without extension).
@@ -278,8 +275,8 @@ Data loader for experimental data sets, as given in "An accurate probabilistic s
 
 # Returns
 A dictionary containing:
-- `data::Vector{Float64}`: The extracted data values.
-- `times::Vector{Float64}`: The corresponding time points.
+- `data::Vector{Float32}`: The extracted data values.
+- `times::Vector{Float32}`: The corresponding time points.
 - `ground_truths::Nothing`
 - `parameters::Nothing`
 """
@@ -288,15 +285,15 @@ function load_data_expt(filename::String; path::Union{Nothing, String}=nothing)
     full_name = filename * ".txt"
     full_path = isnothing(path) ? full_name : joinpath(path, full_name)
 
-    times = Float64[]
-    data = Float64[]
+    times = Float32[]
+    data = Float32[]
 
     # Read in data from the file
     open(full_path, "r") do f
         for line in eachline(f)
             split_data = split(line, ",")
-            push!(times, parse(Float64, split_data[1]))
-            push!(data, parse(Float64, split_data[2]))
+            push!(times, parse(Float32, split_data[1]))
+            push!(data, parse(Float32, split_data[2]))
         end
     end
 
@@ -314,7 +311,7 @@ end
 """
     load_data_kv(filename::String; path::Union{Nothing, String}=nothing)
 
-Data loader for KV-type data sets, as given in "An accurate probabilistic step finder for time-series analysis".
+Data loader for KV-type data sets, as given in "An accurate probabilistic step finder for timf-series analysis".
 
 # Arguments
 - `filename::String`: Name of the file to be loaded (without extension).
@@ -322,9 +319,9 @@ Data loader for KV-type data sets, as given in "An accurate probabilistic step f
 
 # Returns
 A dictionary containing:
-- `data::Vector{Float64}`: The extracted data values.
-- `times::Vector{Float64}`: The corresponding time points.
-- `ground_truths::Dict{String, Vector{Float64}}`: Ground truth trajectory data.
+- `data::Vector{Float32}`: The extracted data values.
+- `times::Vector{Float32}`: The corresponding time points.
+- `ground_truths::Dict{String, Vector{Float32}}`: Ground truth trajectory data.
 - `parameters::Dict{String, Any}`: Synthetic data generation parameters.
 """
 function load_data_kv(filename::String; path::Union{Nothing, String}=nothing)
@@ -333,11 +330,11 @@ function load_data_kv(filename::String; path::Union{Nothing, String}=nothing)
     full_path = isnothing(path) ? full_name : joinpath(path, full_name)
 
     # Initialize variables
-    ground_b = Float64[]
-    ground_h = Float64[]
-    ground_t = Float64[]
-    data = Float64[]
-    times = Float64[]
+    ground_b = Float32[]
+    ground_h = Float32[]
+    ground_t = Float32[]
+    data = Float32[]
+    times = Float32[]
 
     # Read in file
     open(full_path, "r") do f
@@ -362,7 +359,7 @@ function load_data_kv(filename::String; path::Union{Nothing, String}=nothing)
 
         for i in 1:5
             for _ in 1:N_file
-                value = parse(Float64, strip(readline(f)))
+                value = parse(Float32, strip(readline(f)))
                 if i == 1
                     push!(ground_b, value)
                 elseif i == 2
@@ -380,10 +377,10 @@ function load_data_kv(filename::String; path::Union{Nothing, String}=nothing)
 
     # Extract synthetic data generation parameters
     B_file = parse(Int, B_str)
-    F_file = parse(Float64, F_str)
-    h_stp_file = parse(Float64, h_stp_str)
-    t_stp_file = parse(Float64, t_stp_str)
-    eta_file = parse(Float64, eta_str)
+    F_file = parse(Float32, F_str)
+    h_stp_file = parse(Float32, h_stp_str)
+    t_stp_file = parse(Float32, t_stp_str)
+    eta_file = parse(Float32, eta_str)
     B_max_file = parse(Int, B_max_str)
 
     params = Dict(
@@ -419,4 +416,6 @@ function load_data_kv(filename::String; path::Union{Nothing, String}=nothing)
     return dataset
 end
 
+export load_data_garcia, load_data_txt, load_data_csv,
+       load_data_HMM, load_data_expt, load_data_kv
 end # module BNPInputs

@@ -3,6 +3,8 @@ module BNPSampler
 using LinearAlgebra
 using Random
 using Distributions
+using ..BNPAnalysis
+import SpecialFunctions: loggamma
 
 """
     sample_b(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, gamma, rng, temp, kernel)
@@ -81,47 +83,79 @@ Samples `F_bg` and all `h_m` as part of BNP-Step's Gibbs sampler.
 # Returns
 A vector containing the new `F_bg` sample as the first element, followed by the new `h_m` samples.
 """
-function sample_fh(weak_limit, num_data, data_points, data_times, b_m_vec, t_m_vec, dt_vec, eta_vec, nu_vec, psi, chi, f_ref, h_ref, rng, temp, kernel)
-    on_loads = findall(x -> x == 1, b_m_vec[end])
-    off_loads = findall(x -> x == 0, b_m_vec[end])
-    on_load_times = t_m_vec[end][on_loads]
+function sample_fh(
+    weak_limit::Int,
+    num_data::Int,
+    data_points::Vector{Float32},
+    data_times::Vector{Float32},
+    b_m_vec::Vector{<:AbstractVector{Bool}},
+    t_m_vec::Vector{Vector{Float32}},
+    dt_vec::Vector{Float32},
+    eta_vec::Vector{Float32},
+    nu_vec::Vector{Float32},
+    psi::Float32,
+    chi::Float32,
+    f_ref::Float32,
+    h_ref::Float32,
+    rng::AbstractRNG,
+    temp::Float32,
+    kernel::Function
+)::Vector{Float32}
+    b_m = b_m_vec[end]
+    t_m = t_m_vec[end]
+    dt = dt_vec[end]
+    η = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
 
-    times_matrix = repeat(on_load_times', num_data, 1)
-    obs_time_matrix = repeat(data_times, 1, length(on_loads))
-    load_matrix = ones(num_data, length(on_loads))
+    on_idx = findall(b_m)
+    off_idx = findall(!, b_m)
 
-    eta_nu = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
-    eta_nu = reshape(eta_nu, :, 1)
-
-    load_heaviside_mat = isempty(dt_vec) ?
-        load_matrix .* kernel(obs_time_matrix .- times_matrix) :
-        load_matrix .* kernel(obs_time_matrix .- times_matrix, dt_vec[end])
-
-    precision_matrix = load_heaviside_mat' * (eta_nu .* load_heaviside_mat) + chi * I(length(on_loads))
-    precision_first_row = sum(eta_nu .* load_heaviside_mat, dims=1)
-    precision_matrix = vcat(hcat(sum(eta_nu) + psi, precision_first_row), hcat(precision_first_row', precision_matrix))
-
-    q_matrix = (data_points' * (eta_nu .* load_heaviside_mat)) + (chi * h_ref)
-    q_matrix = vcat(sum(data_points .* eta_nu) + (psi * f_ref), q_matrix)
-
-    covariance = temp * inv(precision_matrix)
-    mean_vector = covariance * q_matrix
-
-    h_tmp = rand(MvNormal(mean_vector, covariance))
-    new_fh = zeros(weak_limit + 1)
-    ind = 1
-
-    for i in 1:(weak_limit + 1)
-        if i in off_loads
-            new_fh[i] = rand(Normal(h_ref, sqrt(1 / chi)))
-        else
-            new_fh[i] = h_tmp[ind]
-            ind += 1
-        end
+    if isempty(on_idx)
+        # No active steps: sample f and h_i independently from prior
+        fh = zeros(Float32, weak_limit + 1)
+        fh[1] = rand(rng, Normal(f_ref, sqrt(1 / psi)))
+        fh[2:end] .= rand.(rng, Normal(h_ref, sqrt(1 / chi)), weak_limit)
+        return fh
     end
 
-    return new_fh
+    # === Design matrix: each column is a kernel(t - t_m[i]) for active i
+    H = zeros(Float32, num_data, length(on_idx))
+    for (j, i) in enumerate(on_idx)
+        H[:, j] .= kernel(data_times .- t_m[i], dt)
+    end
+
+    # === Full design matrix: prepend column of 1s for background
+    X = hcat(ones(Float32, num_data), H)
+
+    # === Precision and posterior
+    Λ = Diagonal(η)
+    prior_prec = Diagonal(vcat(psi, fill(chi, length(on_idx))))
+    posterior_prec = X' * Λ * X + prior_prec
+    rhs = X' * (Λ * data_points) + prior_prec * vcat(f_ref, fill(h_ref, length(on_idx)))
+
+    # === Sample from Gaussian posterior
+    cov = temp .* inv((posterior_prec + posterior_prec') / 2)
+    mean = cov * rhs
+    cov = (cov + cov') / 2  # ensure symmetry
+
+    # Optional stabilization
+    eigmin = minimum(eigvals(cov))
+    if eigmin < 1f-8
+        cov .+= (1f-8 - eigmin + 1f-10) * I
+    end
+
+    sample = rand(rng, MvNormal(mean, cov))
+
+    # === Assemble full vector of [f; h1, h2, ..., hB]
+    fh = zeros(Float32, weak_limit + 1)
+    fh[1] = sample[1]
+    for (j, i) in enumerate(on_idx)
+        fh[i+1] = sample[j+1]
+    end
+    fh[2:end][off_idx] .= rand.(rng, Normal(h_ref, sqrt(1 / chi)))  # from prior
+
+    return fh
 end
+
 
 """
     sample_t(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, rng, temp, kernel)
@@ -142,58 +176,68 @@ Samples all `t_m` as part of BNP-Step's Gibbs sampler.
 # Returns
 A vector containing the new `t_m` sample.
 """
-function sample_t(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, rng, temp, kernel)
-    # Pre-calculate matrices
-    load_matrix = repeat(b_m_vec[end]', num_data, 1)
-    obs_time_matrix = repeat(data_times, 1, weak_limit)
-    height_matrix = repeat(h_m_vec[end]', num_data, 1)
+function sample_t(
+    weak_limit::Int,
+    num_data::Int,
+    data_points::Vector{Float32},
+    data_times::Vector{Float32},
+    b_m_vec::Vector{<:AbstractVector{Bool}},
+    h_m_vec::Vector{Vector{Float32}},
+    t_m_vec::Vector{Vector{Float32}},
+    dt_vec::Vector{Float32},
+    f_vec::Vector{Float32},
+    eta_vec::Vector{Float32},
+    nu_vec::Vector{Float32},
+    rng::AbstractRNG,
+    temp::Float32,
+    kernel::Function
+)::Vector{Float32}
 
-    eta_nu = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
+    b_m = b_m_vec[end]
+    h_m = h_m_vec[end]
+    t_m = copy(t_m_vec[end])  # mutable copy
+    dt = dt_vec[end]
+    f = f_vec[end]
+    η = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
 
-    bh_matrix = load_matrix .* height_matrix
-    times_matrix = repeat(t_m_vec[end]', num_data, 1)
-
-    # Shuffle sampling order
-    sampling_order = shuffle(rng, 1:weak_limit)
-
-    # Pre-generate random values for Metropolis step
-    u_values = rand(rng, weak_limit)
+    sampling_order = shuffle(rng, eachindex(b_m))
+    u_values = rand(rng, length(b_m))
 
     for i in sampling_order
-        if b_m_vec[end][i] == 0
-            # Sample from the prior if the load is off
-            times_matrix[:, i] .= rand(rng, data_times)
-        else
-            # Generate a proposal
-            t_prop = rand(rng, data_times)
-            t_old = times_matrix[1, i]
+        if !b_m[i]
+            # @show "skipping load $i: $b_m[i]"
+            t_m[i] = rand(rng, data_times)
+            continue
+        end
 
-            # Calculate exponent for t_old
-            bht_matrix = isempty(dt_vec) ?
-                bh_matrix .* kernel(obs_time_matrix .- times_matrix) :
-                bh_matrix .* kernel(obs_time_matrix .- times_matrix, dt_vec[end])
-            bht_sum = f_vec[end] .+ sum(bht_matrix, dims=2)
-            exponent_old = sum(-0.5 .* eta_nu .* (data_points .- bht_sum).^2)
+        t_old = t_m[i]
+        # t_prop = rand(rng, data_times)
+        t_prop = clamp(t_old + rand(rng, [-1, 0, 1]),extrema(data_times)...)
+        if t_prop == t_old
+            continue
+        end
 
-            # Calculate exponent for t_prop
-            times_matrix[:, i] .= t_prop
-            bht_matrix = isempty(dt_vec) ?
-                bh_matrix .* kernel(obs_time_matrix .- times_matrix) :
-                bh_matrix .* kernel(obs_time_matrix .- times_matrix, dt_vec[end])
-            bht_sum = f_vec[end] .+ sum(bht_matrix, dims=2)
-            exponent_prop = sum(-0.5 .* eta_nu .* (data_points .- bht_sum).^2)
+        ll_old = calculate_loglikelihood(
+            weak_limit, num_data, data_points, data_times,
+            [b_m], [h_m], [t_m], [dt], [f], [η], nu_vec, kernel
+        )
 
-            # Calculate acceptance ratio in log space
-            log_acceptance_ratio = (exponent_old - exponent_prop) / temp
+        # Compute log likelihood for proposed t_i
+        t_m[i] = t_prop
+        ll_prop = calculate_loglikelihood(
+            weak_limit, num_data, data_points, data_times,
+            [b_m], [h_m], [t_m], [dt], [f], [η], nu_vec, kernel
+        )
 
-            # Accept or reject the proposal
-            if log(u_values[i]) >= log_acceptance_ratio
-                times_matrix[:, i] .= t_old
-            end
+        # Metropolis-Hastings
+        # @show  [ll_old , ll_prop , temp]
+        log_alpha = (ll_prop - ll_old) / temp
+        if log(u_values[i]) >= log_alpha
+            t_m[i] = t_old
         end
     end
 
-    return times_matrix[1, :]
+    return t_m
 end
 
 """
@@ -223,7 +267,7 @@ The new `eta` sample.
 function sample_eta_metropolis(eta_vec, nu_vec, weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec,
                                 phi, eta_ref, rng, temp, kernel)
     new_eta = eta_vec[end]
-    proposal_eta = new_eta + 1 * rand(Normal(0, 1, rng))  # Propose a new `eta`
+    proposal_eta = new_eta + 1 * rand(rng , Normal(0, 1))  # Propose a new `eta`
 
     if proposal_eta > 0
         # Calculate log-likelihood for the proposed `eta`
@@ -275,7 +319,7 @@ The new `dt` sample.
 function sample_dt_metropolis(eta_vec, nu_vec, weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec,
                                chi, dt_ref, rng, temp, kernel)
     current_dt = dt_vec[end]
-    proposal_dt = current_dt + rand(Normal(0, 1, rng))  # Propose a new `dt`
+    proposal_dt = current_dt + Float32(rand(rng, Normal(0, 1)))  # Propose a new `dt`
 
     if proposal_dt > 0
         # Calculate log-likelihood for the proposed `dt`
@@ -320,33 +364,28 @@ Calculates the log likelihood given a dataset and a set of associated samples fr
 The log likelihood for the provided samples and observations.
 """
 function calculate_loglikelihood(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec,
-                                  t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, kernel)
-    # Pre-calculate matrices
-    times_matrix = repeat(t_m_vec[end]', num_data, 1)
-    obs_time_matrix = repeat(data_times, 1, weak_limit)
-    height_matrix = repeat(h_m_vec[end]', num_data, 1)
-    load_matrix = repeat(b_m_vec[end]', num_data, 1)
+    t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, kernel)
+# Determine eta_nu
+eta_nu = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
 
-    eta_nu = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
+# Reconstruct full signal from the last sample
+trace = reconstruct_signal_from_sample(
+b_m_vec[end],
+h_m_vec[end],
+t_m_vec[end],
+dt_vec[end],
+f_vec[end],
+kernel,
+data_times[:]
+)
 
-    # Calculate product of b_m and h_m term-wise
-    bh_matrix = load_matrix .* height_matrix
+# Compute log-likelihood
+residual = data_points .- trace
+exponent_term = sum((eta_nu ./ 2) .* residual.^2)
+log_likelihood = sum(log.(eta_nu ./ (2π)) ./ 2) - exponent_term
 
-    # Calculate Heaviside terms times loads and heights
-    bht_matrix = isempty(dt_vec) ?
-        bh_matrix .* kernel(obs_time_matrix .- times_matrix) :
-        bh_matrix .* kernel(obs_time_matrix .- times_matrix, dt_vec[end])
-
-    # Calculate sum term for the exponent
-    bht_sum = f_vec[end] .+ sum(bht_matrix, dims=2)
-    exponent_term = sum((eta_nu ./ 2) .* (data_points .- bht_sum).^2)
-
-    # Calculate log likelihood
-    log_likelihood = sum(log.(eta_nu ./ (2 * π)) ./ 2) - exponent_term
-
-    return log_likelihood
+return log_likelihood
 end
-
 """
     calculate_logposterior(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec,
                            t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, chi, h_ref, gamma, phi, eta_ref, psi, dt_ref, f_ref, kernel)
@@ -374,40 +413,51 @@ Calculates the log posterior given a dataset and a set of associated samples fro
 # Returns
 The log posterior and log likelihood for the provided samples and observations.
 """
-function calculate_logposterior(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec,
-                                 t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, chi, h_ref, gamma, phi, eta_ref, psi, dt_ref, f_ref, kernel)
-    # Calculate the log likelihood
-    log_likelihood = calculate_loglikelihood(weak_limit, num_data, data_points, data_times, b_m_vec, h_m_vec,
-                                             t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, kernel)
 
-    # Calculate priors on b_m
+
+function calculate_logposterior(weak_limit, num_data, data_points, data_times,
+                                 b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec,
+                                 eta_vec, nu_vec,
+                                 chi, h_ref, gamma, phi, eta_ref, psi, dt_ref, f_ref,
+                                 kernel)
+
+    # Likelihood
+    log_likelihood = calculate_loglikelihood(weak_limit, num_data, data_points, data_times,
+                                             b_m_vec, h_m_vec, t_m_vec, dt_vec, f_vec, eta_vec, nu_vec, kernel)
+
+    # === Priors ===
     b_m = b_m_vec[end]
-    on_prior = (gamma / weak_limit) .* b_m
-    off_prior = (1 .- b_m) .* (1 .- (gamma / weak_limit))
-    prior_b_m = sum(log.(on_prior .+ off_prior))
-
-    # Calculate priors on h_m
     h_m = h_m_vec[end]
-    prior_h_m = ((weak_limit / 2) * log(chi / (2 * π))) - ((chi / 2) * sum((h_m .- h_ref).^2))
+    t_m = t_m_vec[end]
+    dt = dt_vec[end]
+    f = f_vec[end]
+    eta = isempty(eta_vec) ? nothing : eta_vec[end]
 
-    # Calculate priors on t_m
+    # Bernoulli-Beta process prior on b_m (approximate with Bernoulli log-prob)
+    p_on = gamma / weak_limit
+    prior_b_m = sum(log.(ifelse.(b_m .== 1, p_on, 1 - p_on)))
+
+    # Normal prior on h_m
+    prior_h_m = sum(logpdf.(Normal(h_ref, sqrt(1 / chi)), h_m))
+
+    # Uniform prior on t_m
     prior_t_m = -weak_limit * log(num_data)
 
-    # Calculate prior on eta
-    prior_eta = isempty(eta_vec) ? 0 : ((phi - 1) * log(eta_vec[end])) - ((phi * eta_vec[end]) / eta_ref) -
-                                       loggamma(phi) - (phi * log(eta_ref / phi))
+    # Gamma prior on η (if present)
+    prior_eta = eta === nothing ? 0.0 :
+                logpdf(Gamma(phi, eta_ref / phi), eta)
 
-    # Calculate prior on dt
-    prior_dt = ((chi - 1) * log(dt_vec[end])) - ((chi * dt_vec[end]) / dt_ref) - loggamma(chi) -
-               (chi * log(dt_ref / chi))
+    # Gamma prior on dt
+    prior_dt = logpdf(Gamma(chi, dt_ref / chi), dt)
 
-    # Calculate prior on F
-    prior_f = (0.5 * log(psi / (2 * π))) - ((psi / 2) * ((f_vec[end] - f_ref)^2))
+    # Normal prior on f
+    prior_f = logpdf(Normal(f_ref, sqrt(1 / psi)), f)
 
-    # Calculate the log posterior
-    log_posterior = log_likelihood + prior_b_m + prior_h_m + prior_t_m + prior_eta + prior_f + prior_dt
+    # Combine all
+    log_posterior = log_likelihood + prior_b_m + prior_h_m + prior_t_m + prior_eta + prior_dt + prior_f
 
     return log_posterior, log_likelihood
 end
 
+export sample_b, sample_fh, sample_t, sample_eta_metropolis, sample_dt_metropolis, calculate_loglikelihood, calculate_logposterior
 end # module BNPSampler

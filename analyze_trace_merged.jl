@@ -4,18 +4,6 @@ using BNPStep
 using DelimitedFiles
 using JLD2
 
-# Load data from CSV file
-function load_csv_data(filepath::String; has_timepoints::Bool=false)
-    if has_timepoints
-        data = readdlm(filepath, ',', Float64)
-        times = data[:, 1]
-        observations = data[:, 2]
-    else
-        observations = readdlm(filepath, ',', Float64)
-        times = nothing
-    end
-    return Dict("data" => observations, "times" => times)
-end
 
 # Main script
 function main()
@@ -27,7 +15,7 @@ function main()
     data = load_csv_data(filepath, has_timepoints=true)
 
     # Initialize BNPStep object
-    step = BNPStep(
+    step = BNP_Step(
         chi=0.028,
         dt_ref=100.0,
         h_ref=10.0,
@@ -37,7 +25,7 @@ function main()
         eta_ref=10.0,
         gamma=1.0,
         B_max=50,
-        load_initialization="prior",
+        load_initialization=:prior,
         use_annealing=true,
         init_temperature=2250,
         scale_factor=1.25,
