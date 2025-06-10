@@ -35,7 +35,7 @@ using Random, HDF5
 
 Simulates synthetic step data with ground truth parameters, saves to `filename`, and returns the dataset and ground truth dictionary.
 """
-function simulate_and_save_ground_truth(filename::String; N::Int=1000, B::Int=20, noise_level::Float32=0.1f0)
+function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=20, noise_level::Float32=0.25f0)
     t = collect(1:N)
     t_f32 = Float32.(t)
 
@@ -366,7 +366,7 @@ function visualize_results(results::Dict, data::Dict;
     fig = Figure(size=(1000, 600), fontsize=font_size)
     ax = Axis(fig[1, 1], xlabel="Time", ylabel="Signal", title="BNP-Step Trajectory Posterior")
    
-    heatmap!(ax, t_edges, s_edges, heatmap_img; colormap=:grays, alpha=0.4, interpolate=false)
+    heatmap!(ax, t_edges, s_edges, heatmap_img'; colormap=:blues, alpha=0.4, interpolate=false)
     
   
     lines!(ax, t_n, data_points, color=datacolor, label="Data")
@@ -580,7 +580,7 @@ function BNP_Step_from_ground_truth(truth::Dict{String,Any})
         use_annealing = false,
         init_temperature = 1,
         scale_factor = 1.0f0,
-        rng = Random.TaskLocalRNG(),
+        rng = MersenneTwister(6626),  # Fixed seed for reproducibility
         truth = Dict(
             "b_m" => truth["b_m"],
             "h_m" => truth["h_m"],
