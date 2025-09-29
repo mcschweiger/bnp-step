@@ -1,5 +1,6 @@
 /yovan_data/*
 /data/*
+/old/*
 *.docx
 *.txt
 *.zip
