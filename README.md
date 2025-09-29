@@ -2,6 +2,25 @@
 
 :construction: :snake: Active construction area! Check back often for updates. Expect breaking changes. :snake: :construction:
 
+###### Note: BNP-Step.jl requires Julia 1.15 or later. Please upgrade if you're on an older version: [https://julialang.org/downloads/](https://julialang.org/downloads/).
+
+### Welcome to BNP-Step.jl!
+
+### Q: Why Julia?
+### A: Julia is fast! Julia is lightweight! Julia was designed with scientific computing in mind!
+
+### Q: Julia sounds awesome, what's the catch? Is it a pain to install?
+### A: No catch! It's easy to install [(Read this!)](https://docs.julialang.org/en/v1/manual/installation/) and use [(Read this for help and more info!)](https://docs.julialang.org/). 
+
+
+
+
+
+
+
+
+
+
 This repository contains the Julia package and helper functions for BNP-Step, a computational method described in [An accurate probabilistic step finder for time-series analysis, bioRxiv 2023](https://www.biorxiv.org/content/10.1101/2023.09.19.558535v1).
 
 ## Installation
@@ -32,10 +51,10 @@ using BNPStep
 and see the example shown in ./scripts/example.jl, for a basic recipie.
 
 In the near future, we plan to add an option for running BNP-Step using a simple GUI.
-
+<!-- 
 ## GPU Support
-
-BNP-Step supports GPU acceleration for computationally intensive tasks. If a compatible GPU is detected, computations will automatically leverage GPU resources. For users without a GPU, the code will gracefully fall back to CPU execution.
+ -->
+<!-- BNP-Step supports GPU acceleration for computationally intensive tasks. If a compatible GPU is detected, computations will automatically leverage GPU resources. For users without a GPU, the code will gracefully fall back to CPU execution. -->
 
 ## Questions? Contact us!
 
