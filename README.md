@@ -6,29 +6,24 @@ This repository contains the Julia package and helper functions for BNP-Step, a 
 
 ## Installation
 
+To get started simply clone this repo:
+```
+git clone https://github.com/mcschweiger/bnp-step.git
+cd bnp-step
+```
+
 BNP-Step is now a Julia package. To install and set up the package, run the following commands in the Julia REPL:
 
 ```julia
 using Pkg
-Pkg.activate(".")
-Pkg.instantiate()
+Pkg.activate(".") # make sure this points to the `/bnp-step` directory cloned from github
+Pkg.resolve()     # this will install any missing packages
+Pkg.instantiate() # finally, precompile the code
 ```
-
-Alternatively, you can clone the repository and add it as a package:
-
-```julia
-git clone https://github.com/mcschweiger/bnp-step.git
-cd bnp-step
-using Pkg
-Pkg.develop(path=".")
-Pkg.instantiate()
-```
-
-BNP-Step includes GPU support via `CUDA.jl`. Ensure that your system has a compatible NVIDIA GPU and the necessary CUDA drivers installed.
 
 ## Usage
 
-Once installed, you can use BNP-Step by importing the package:
+Once installed, you can use BNP-Step by importing the package into a REPL:
 
 ```julia
 using BNPStep
@@ -50,4 +45,4 @@ BNP-Step is a work in progress. Further documentation will be provided as it is 
 
 ## Acknowledgments
 
-This updated version was developed by Max Schweiger, based on his work with A. Rojewski and S. Presse, with significant contributions from members of Garcia Lab at Berkley as well as GitHub Copilot. We thank all contributors for their efforts in improving BNP-Step.
+This updated version was developed by Max Schweiger, based on his work with A. Rojewski and S. Presse, with significant contributions from members of Garcia Lab at Berkley as well as GitHub Copilot and ChatGPT. We thank all contributors for their efforts in improving BNP-Step.

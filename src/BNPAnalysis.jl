@@ -4,6 +4,8 @@ using CSV
 using DataFrames
 using LinearAlgebra
 using Statistics
+# TODO: is d the transcription velocity? if not what is it?
+# MS2 kernel
 function step_kernel(t::AbstractArray, d::Real)
     frac = (53 * 24) / (53 * 24 + 3861)
     slope = 1 / (d * frac)
@@ -12,8 +14,11 @@ function step_kernel(t::AbstractArray, d::Real)
     y .= ifelse.((t .< 0) .| (t .> d), 0.0, y)
     return y
 end
-kernel = step_kernel
-
+function heaviside_kernel(t::AbstractArray, d::Real)
+    return ifelse.(t .> 0, 1.0, 0.0)
+end
+# kernel = step_kernel
+kernel = heaviside_kernel
 """
     calculate_step_statistics(data::Vector{Float32}, times::Vector{Float32})
 

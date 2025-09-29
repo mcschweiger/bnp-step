@@ -21,7 +21,7 @@ using LinearAlgebra
 using DelimitedFiles  # Required for reading files
 using StatsBase  # For statistical operations
 
-GLMakie      # For visualization
+using GLMakie      # For visualization
 using Distributions  # For sampling distributions
 
 
@@ -190,11 +190,12 @@ end
 # """
 # function BNP_Step(; chi=0.028, dt_ref=100.0, h_ref=10.0, psi=0.0028, F_ref=0.0, phi=1.0, eta_ref=10.0,
 #                   gamma=1.0, B_max=50, load_initialization=:prior, use_annealing=false,
-#                   init_temperature=2250, scale_factor=1.25, seed=nothing)
-#     rng = isnothing(seed) ? Random.GLOBAL_RNG : MersenneTwister(seed)
+#                   init_temperature=2250, scale_factor=1.25, rng=nothing, truth=nothing)
+#     rng = isnothing(rng) ? Random.GLOBAL_RNG : MersenneTwister(rng)
 #     return BNP_Step(chi, dt_ref, h_ref, psi, F_ref, phi, eta_ref, gamma, B_max,
-#                    load_initialization, use_annealing, init_temperature, scale_factor, rng)
+#                    load_initialization, use_annealing, init_temperature, scale_factor, rng, truth)
 # end
+
 function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
     # === Validate input data
     if !haskey(data, "data") || !haskey(data, "times")
@@ -253,10 +254,10 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
 
     # === Gibbs sampling loop
     for _ in 1:num_samples
-        # fh = sample_fh(_step.B_max, num_data, data_points, t_n, b_m_trace, t_m_trace, dt_trace, eta_trace, nu_vec,
-        #                _step.psi, _step.chi, _step.F_ref, _step.h_ref, _step.rng, temp, kernel)
-        # f_bg = fh[1]
-        # h_m = fh[2:end]
+        fh = sample_fh(_step.B_max, num_data, data_points, t_n, b_m_trace, t_m_trace, dt_trace, eta_trace, nu_vec,
+                       _step.psi, _step.chi, _step.F_ref, _step.h_ref, _step.rng, temp, kernel)
+        f_bg = fh[1]
+        h_m = fh[2:end]
         push!(results["h_m"], h_m)
         push!(h_m_trace, h_m)
         push!(results["f_bg"], f_bg)
@@ -338,7 +339,10 @@ function visualize_results(results::Dict, data::Dict;
     traces = [reconstruct_signal_from_sample(b_m[i], h_m[i], t_m[i], dt[i], f_bg[i], kernel, t_n) for i in top_inds]
     T = repeat(t_n', topK, 1)
     S = hcat(traces...)'
-
+    # === Pointwise credible intervals across samples
+    q05 = [quantile(view(S, :, j), 0.05) for j in 1:size(S, 2)]
+    q50 = [quantile(view(S, :, j), 0.50) for j in 1:size(S, 2)]
+    q95 = [quantile(view(S, :, j), 0.95) for j in 1:size(S, 2)]
     # === Setup grid
     nbins_t = length(t_n) ÷ 4
     nbins_s = 100
@@ -366,9 +370,12 @@ function visualize_results(results::Dict, data::Dict;
     fig = Figure(size=(1000, 600), fontsize=font_size)
     ax = Axis(fig[1, 1], xlabel="Time", ylabel="Signal", title="BNP-Step Trajectory Posterior")
    
-    heatmap!(ax, t_edges, s_edges, heatmap_img'; colormap=:blues, alpha=0.4, interpolate=false)
-    
-  
+    # heatmap!(ax, t_edges, s_edges, heatmap_img'; colormap=:blues, alpha=0.4, interpolate=false)
+    # (already have) heatmap!(ax, t_edges, s_edges, heatmap_img'; colormap=:blues, alpha=0.4, interpolate=false)
+
+    # 90% credible band (5–95%) and median
+    band!(ax, t_n, q05, q95, color=(learncolor, 0.20), label = "90% CI")  # light fill
+    lines!(ax, t_n, q50, color=learncolor, linestyle=:dot, linewidth=2, label="Median (50%)")
     lines!(ax, t_n, data_points, color=datacolor, label="Data")
     lines!(ax, t_n, step_map, color=learncolor, linewidth=2.0, label="Steps (MAP)")
     if step_last !== nothing
@@ -580,7 +587,7 @@ function BNP_Step_from_ground_truth(truth::Dict{String,Any})
         use_annealing = false,
         init_temperature = 1,
         scale_factor = 1.0f0,
-        rng = MersenneTwister(6626),  # Fixed seed for reproducibility
+        # rng = MersenneTwister(6626),  # Fixed seed for reproducibility
         truth = Dict(
             "b_m" => truth["b_m"],
             "h_m" => truth["h_m"],

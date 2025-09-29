@@ -168,23 +168,28 @@ function load_data_csv(filename::String, has_timepoints::Bool; path::Union{Nothi
 
         times = data_np[:, 1]
         data = data_np[:, 2]
-        nu_vec = data_np[:, 3]
+        if size(data_np,2) > 2
+            nu_vec = data_np[:, 3]
+        end
 
         # Build dictionary for output
         dataset["data"] = Float32.(data)
         dataset["times"] = Float32.(times)
-        dataset["nu_vec"] = Float32.(nu_vec)
     else
         # Read CSV file into a DataFrame
         df = CSV.File(full_path, header=false) |> DataFrame
         data_np = Matrix(df)
 
         data = data_np[:, 1]
-        nu_vec = data_np[:, 2]
+        if size(data_np,2) > 1
+            nu_vec = data_np[:, 2]
+        end
 
         # Build dictionary for output
         dataset["data"] = Float32.(data)
         dataset["times"] = nothing
+    end
+    if @isdefined nu_vec
         dataset["nu_vec"] = Float32.(nu_vec)
     end
 
