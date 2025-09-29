@@ -27,11 +27,9 @@ Once installed, you can use BNP-Step by importing the package into a REPL:
 
 ```julia
 using BNPStep
-
-# Example usage
-BNPStep.runBNPStep(data)
-BNPStep.loadTutorial()
 ```
+
+and see the example shown in ./scripts/example.jl, for a basic recipie.
 
 In the near future, we plan to add an option for running BNP-Step using a simple GUI.
 
