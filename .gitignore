@@ -1,8 +1,10 @@
 /yovan_data/*
 /data/*
+*.docx
 *.txt
 *.zip
 *.fig
 *.mat
 *.pkl
 *.csv
+*.h5
