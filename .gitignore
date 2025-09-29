@@ -1,5 +1,7 @@
 /yovan_data/*
 /data/*
+*.txt
+*.zip
 *.fig
 *.mat
 *.pkl
