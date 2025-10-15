@@ -35,15 +35,15 @@ using Random, HDF5
 
 Simulates synthetic step data with ground truth parameters, saves to `filename`, and returns the dataset and ground truth dictionary.
 """
-function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=20, noise_level::Float32=0.25f0)
+function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=50, noise_level::Float32=0.25f0)
     t = collect(1:N)
     t_f32 = Float32.(t)
 
     # Ground truth parameters
     f_bg = 5.0f0
-    h_m = Float32.(rand(Float32, B) .* 2f0)
+    h_m = Float32.((rand(Float32, B) .* 2f0) .+ 1f0)
     b_m = falses(B)
-    b_m[1:10] .= true
+    b_m[1:25] .= true
     t_m = Float32.(sort(rand(1:N-100, B)))
     dt = 50.0f0
     eta = 10.0f0
@@ -574,7 +574,7 @@ Construct a BNP_Step instance using values from a ground truth dictionary.
 """
 function BNP_Step_from_ground_truth(truth::Dict{String,Any})
     return BNP_Step(
-        chi = 1.0f0,
+        chi = 0.001f0,
         dt_ref = truth["dt"],
         h_ref = mean(vcat(truth["h_m"]...)),
         psi = 1.0f0,

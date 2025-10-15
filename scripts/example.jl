@@ -16,11 +16,11 @@ dataset, truth = simulate_and_save_ground_truth("/tmp/synthetic_data_"*string(N_
 step_model = BNP_Step_from_ground_truth(truth)
 
 # Run BNP-Step with N_samples iterations
-N_samples = 5000
-results = analyze(step_model, dataset, N_samples)
+N_samples = 500
+@time results = analyze(step_model, dataset, N_samples)
 
 # Write the results to H5
-save_results("./results/test.h5", results)
+# save_results("./results/test.h5", results)
 
 
 # Generate plots, with 95% CIs, median, MAP and last sample

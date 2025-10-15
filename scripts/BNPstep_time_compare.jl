@@ -1,6 +1,6 @@
 using Pkg
-Pkg.activate("/home/max/codes/stepfind/bnp-step/")
-includet("/home/max/codes/stepfind/bnp-step/src/BNPStep.jl")
+Pkg.activate("/home/max/codes/stepfind/BNPStep/")
+include("/home/max/codes/stepfind/BNPStep/src/BNPStep.jl")
 using .BNPStep   # assuming visualize_results is part of this module
 # using GLMakie
 using StatsBase
@@ -10,13 +10,13 @@ using StatsBase
 N_data=1000
 
 # Create the synthetic dataset and write it to a temporary location
-dataset, truth = simulate_and_save_ground_truth("/tmp/synthetic_data_"*string(N_data)*".h5"; N_data)
+dataset, truth = simulate_and_save_ground_truth("/tmp/synthetic_data_"*string(N_data)*".h5"; N = N_data)
 
 # Use the output "truth" dictionary to instantiate the sampler context
 step_model = BNP_Step_from_ground_truth(truth)
 
 # Run 
-results = analyze(step_model, dataset, 100)
+results = analyze(step_model, dataset, 10)
 save_results("./results/test.h5", results)
 # Generate plots
 fig = visualize_results(results, dataset; plot_type="step")
