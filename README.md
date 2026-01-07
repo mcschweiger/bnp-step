@@ -2,7 +2,7 @@
 
 :construction: :snake: Active construction area! Check back often for updates. Expect breaking changes. :snake: :construction:
 
-###### Note: BNP-Step.jl requires Julia 1.15 or later. Please upgrade if you're on an older version: [https://julialang.org/downloads/](https://julialang.org/downloads/).
+###### Note: BNP-Step.jl requires Julia 1.11.5 or later. Please upgrade if you're on an older version: [https://julialang.org/downloads/](https://julialang.org/downloads/).
 
 ### Welcome to BNP-Step.jl!
 
