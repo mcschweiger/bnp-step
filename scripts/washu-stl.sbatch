@@ -7,10 +7,11 @@
 #SBATCH --error=logs/error_%A_%a.txt
 ##SBATCH -q grp_spresse
 #SBATCH -p public
-#SBATCH --time=2-00:00:00
+#SBATCH --time=0-08:00:00
 #SBATCH --array=1-12
 #SBATCH --ntasks=1
-#SBATCH --gres=gpus-per-node:1
+#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 
