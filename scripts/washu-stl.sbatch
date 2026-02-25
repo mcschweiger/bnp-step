@@ -8,10 +8,11 @@
 ##SBATCH -q grp_spresse
 #SBATCH -p general
 #SBATCH --time=2-00:00:00
-#SBATCH --array=1-9
+#SBATCH --array=1-12
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
-#SBATCH --mem=128G
+#SBATCH --gres=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
 
 # === Use manually installed Julia ===
 # PEDRO: change this path to point to your julia .bin
