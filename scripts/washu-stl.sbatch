@@ -6,7 +6,7 @@
 #SBATCH --output=logs/output_%A_%a.txt
 #SBATCH --error=logs/error_%A_%a.txt
 ##SBATCH -q grp_spresse
-#SBATCH -p general
+#SBATCH -p public
 #SBATCH --time=2-00:00:00
 #SBATCH --array=1-12
 #SBATCH --ntasks=1
