@@ -14,10 +14,11 @@ dataset, truth = simulate_and_save_ground_truth("/tmp/synthetic_data_"*string(N_
 
 # Use the output "truth" dictionary to instantiate the sampler context
 step_model = BNP_Step_from_ground_truth(truth)
+step_model = BNP_Step()
 
 # Run 
-results = analyze(step_model, dataset, 10)
-save_results("./results/test.h5", results)
+results = analyze(step_model, dataset, 3000)
+# save_results("./results/test.h5", results)
 # Generate plots
 fig = visualize_results(results, dataset; plot_type="step")
 display(fig)

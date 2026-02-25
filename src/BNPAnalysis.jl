@@ -20,7 +20,7 @@ end
 function sine_kernel(t::AbstractArray, d::Real)
     return 100 .* sin.(2*pi*t.-d)
 end
-kernel = step_kernel
+kernel = heaviside_kernel
 # kernel = heaviside_kernel
 """
     calculate_step_statistics(data::Vector{Float32}, times::Vector{Float32})

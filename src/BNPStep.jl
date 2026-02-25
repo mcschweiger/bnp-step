@@ -46,7 +46,7 @@ function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=5
     b_m[1:25] .= true
     t_m = Float32.(sort(rand(1:N-100, B)))
     dt = 50.0f0
-    eta = 10.0f0
+    eta = 1.0f0
 
     # Use helper to reconstruct signal
     signal = reconstruct_signal_from_sample( b_m, h_m, t_m, dt, f_bg, kernel,t_f32)
@@ -167,34 +167,48 @@ Defines the BNPStep structure for running BNP-Step analysis.
     truth::Union{Dict{String,Any}, Nothing} = nothing
 end
 
-# """
-#     BNP_Step(; kwargs...)
 
-# Constructor for the BNPStep structure with default values.
+"""
+    BNP_Step(; kwargs...)
 
-# # Keyword Arguments
-# - `chi::Float32`: Default is 0.028.
-# - `dt_ref::Float32`: Default is 100.0.
-# - `h_ref::Float32`: Default is 10.0.
-# - `psi::Float32`: Default is 0.0028.
-# - `F_ref::Float32`: Default is 0.0.
-# - `phi::Float32`: Default is 1.0.
-# - `eta_ref::Float32`: Default is 10.0.
-# - `gamma::Float32`: Default is 1.0.
-# - `B_max::Int`: Default is 50.
-# - `load_initialization::Symbol`: Default is "prior".
-# - `use_annealing::Bool`: Default is false.
-# - `init_temperature::Int`: Default is 2250.
-# - `scale_factor::Float32`: Default is 1.25.
-# - `seed::Union{Int, Nothing}`: Default is nothing.
-# """
-# function BNP_Step(; chi=0.028, dt_ref=100.0, h_ref=10.0, psi=0.0028, F_ref=0.0, phi=1.0, eta_ref=10.0,
-#                   gamma=1.0, B_max=50, load_initialization=:prior, use_annealing=false,
-#                   init_temperature=2250, scale_factor=1.25, rng=nothing, truth=nothing)
-#     rng = isnothing(rng) ? Random.GLOBAL_RNG : MersenneTwister(rng)
-#     return BNP_Step(chi, dt_ref, h_ref, psi, F_ref, phi, eta_ref, gamma, B_max,
-#                    load_initialization, use_annealing, init_temperature, scale_factor, rng, truth)
-# end
+Constructor for the BNPStep structure with default values.
+
+# Keyword Arguments
+- `chi::Float32`: Default is 0.028.
+- `dt_ref::Float32`: Default is 100.0.
+- `h_ref::Float32`: Default is 10.0.
+- `psi::Float32`: Default is 0.0028.
+- `F_ref::Float32`: Default is 0.0.
+- `phi::Float32`: Default is 1.0.
+- `eta_ref::Float32`: Default is 10.0.
+- `gamma::Float32`: Default is 1.0.
+- `B_max::Int`: Default is 50.
+- `load_initialization::Symbol`: Default is "prior".
+- `use_annealing::Bool`: Default is false.
+- `init_temperature::Int`: Default is 2250.
+- `scale_factor::Float32`: Default is 1.25.
+- `seed::Union{Int, Nothing}`: Default is nothing.
+"""
+function BNP_Step(; chi =0.028, 
+                dt_ref  =100.0, 
+                h_ref   =10.0,
+                psi     =0.0028,
+                F_ref   =0.0, 
+                phi     =1.0, 
+                eta_ref =10.0,
+                gamma   =1.0, 
+                B_max   =50, 
+                load_initialization=:prior, 
+                use_annealing=false,
+                init_temperature=2250, 
+                scale_factor=1.25, 
+                rng=nothing, 
+                truth=nothing)
+    rng = isnothing(rng) ? Random.GLOBAL_RNG : MersenneTwister(rng)
+    truth = isnothing(truth) ? simulate_and_save_ground_truth("/home/max/codes/trash.h5")[2] : truth
+    return BNP_Step(chi, dt_ref, h_ref, psi, F_ref, phi, eta_ref, gamma, B_max,
+                   load_initialization, use_annealing, init_temperature, scale_factor, rng, truth)
+end
 
 function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
     # === Validate input data
@@ -216,9 +230,11 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
         b_m = _step.truth["b_m"]
         h_m = _step.truth["h_m"]
         t_m = _step.truth["t_m"]
-        f_bg = _step.truth["f_bg"]
-        eta = _step.truth["eta"]
-        dt = _step.truth["dt"]
+        f_bg = _step.truth["f_bg"][end]
+        eta = _step.truth["eta"][end]
+        dt = _step.truth["dt"][end]
+            # === Initialize traces (each as a Vector of previous samples)
+
     else
         b_m = trues(_step.B_max)
         h_m = rand(Normal(_step.h_ref, sqrt(1 / _step.chi)), _step.B_max)
@@ -226,6 +242,10 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
         f_bg = rand(Normal(_step.F_ref, sqrt(1 / _step.psi)))
         eta = rand(Gamma(_step.eta_ref / _step.phi, _step.phi))
         dt = rand(Gamma(_step.dt_ref / _step.chi, _step.chi))
+        # === Initialize traces (each as a Vector of previous samples)
+
+
+        
     end
 
     @info "Initial posterior" calculate_logposterior(
@@ -244,7 +264,6 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
         "posterior" => Vector{Float32}()
     )
 
-    # === Initialize traces (each as a Vector of previous samples)
     b_m_trace = [b_m]
     h_m_trace = [h_m]
     t_m_trace = [t_m]
@@ -606,7 +625,7 @@ export save_results, load_results, visualize_results, load_data,
 export load_data_garcia, load_data_txt, load_data_csv,
  load_data_HMM, load_data_expt, load_data_kv, reconstruct_signal_from_trace
 export sample_b, sample_fh, sample_t, sample_eta_metropolis, sample_dt_metropolis, 
- calculate_loglikelihood, calculate_logposterior
+ calculate_loglikelihood, calculate_logposterior, emit_results_snapshot
 
 
 end  # module BNPStep

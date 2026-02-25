@@ -101,10 +101,14 @@ function sample_fh(
     temp::Float32,
     kernel::Function
 )::Vector{Float32}
+    @assert all(size(b_m_vec) .== size(t_m_vec))  
     b_m = b_m_vec[end]
     t_m = t_m_vec[end]
     dt = dt_vec[end]
     η = isempty(eta_vec) ? nu_vec : (eta_vec[end] .* nu_vec) ./ (eta_vec[end] .+ nu_vec)
+    # if all(nu_vec .== 1.0f0)
+    #     η = eta_vec[end] .* nu_vec
+    # end
 
     on_idx = findall(b_m)
     off_idx = findall(!, b_m)
@@ -139,8 +143,8 @@ function sample_fh(
 
     # Optional stabilization
     eigmin = minimum(eigvals(cov))
-    if eigmin < 1f-8
-        cov .+= (1f-8 - eigmin + 1f-10) * I
+    if abs(eigmin) < 1f-8
+        cov += (1f-8 - eigmin + 1f-10) * I
     end
 
     sample = rand(rng, MvNormal(mean, cov))
@@ -459,5 +463,15 @@ function calculate_logposterior(weak_limit, num_data, data_points, data_times,
     return log_posterior, log_likelihood
 end
 
-export sample_b, sample_fh, sample_t, sample_eta_metropolis, sample_dt_metropolis, calculate_loglikelihood, calculate_logposterior
+function emit_results_snapshot(results::Dict{String,Vector})
+return Dict{String,Vector}(("b_m"=>results["b_m"][end],
+"h_m"=>results["h_m"][end],
+"f_bg"=>[results["f_bg"][end]],
+"dt"=>[results["dt"][end]],
+"eta"=>[results["eta"][end]],
+"t_m"=>results["t_m"][end],
+"posterior"=>[results["posterior"][end]]))
+end
+
+export sample_b, sample_fh, emit_results_snapshot, sample_t, sample_eta_metropolis, sample_dt_metropolis, calculate_loglikelihood, calculate_logposterior
 end # module BNPSampler

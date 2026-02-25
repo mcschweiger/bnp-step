@@ -92,7 +92,7 @@ A dictionary containing:
 """
 function load_data_txt(filename::String, has_timepoints::Bool; path::Union{Nothing, String}=nothing)
     # Validate input and construct file path
-    full_name = filename * ".txt"
+    full_name = endswith(filename,".txt") ? filename : filename * ".txt"
     full_path = isnothing(path) ? full_name : joinpath(path, full_name)
 
     dataset = Dict{String, Any}()
@@ -102,8 +102,10 @@ function load_data_txt(filename::String, has_timepoints::Bool; path::Union{Nothi
         times = Float32[]
         # Read file line by line
         open(full_path, "r") do f
+            line = first(eachline(f))
+            delim = length(split(line,",")) == 1 ? "\t" : ","
             for line in eachline(f)
-                split_data = split(line, ",")
+                split_data = split(line, delim)
                 push!(times, parse(Float32, split_data[1]))
                 push!(data, parse(Float32, split_data[2]))
             end
@@ -119,7 +121,7 @@ function load_data_txt(filename::String, has_timepoints::Bool; path::Union{Nothi
             end
         end
         dataset["data"] = data
-        dataset["times"] = nothing
+        dataset["times"] = Vector{Float32}(1:length(data))
     end
 
     dataset["ground_truths"] = nothing

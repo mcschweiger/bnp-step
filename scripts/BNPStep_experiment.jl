@@ -1,22 +1,41 @@
 using Pkg
-Pkg.activate("/home/max/codes/stepfind/bnp-step/")
-includet("/home/max/codes/stepfind/bnp-step/src/BNPStep.jl")
+Pkg.activate("/home/max/codes/stepfind/BNPStep/")
+include("/home/max/codes/stepfind/BNPStep/src/BNPStep.jl")
 using .BNPStep   # assuming visualize_results is part of this module
 using StatsBase
-dataset = load_data_csv("/home/max/codes/stepfind/bnp-step/datasets/771_fiona_wblip", true)
-if @isdefined results
-    step_model = BNP_Step(truth = Dict{String,Any}(results), init_temperature=1)
-else
-    step_model = BNP_Step()
-end
-# truth["posterior"] = results["posterior"]
-# Run BNP-Step with minimal iterations
-# step_model = BNP_Step_from_ground_truth(truth)
-results = analyze(step_model, dataset, 100)
 
-# Generate plots
-fig = visualize_results(results, dataset; plot_type="step")
-display(fig)
+j = parse(Int,ARGS[1])
+tracepaths = readdir("/home/max/codes/stepfind/washu-stl-traces",join=true)
+data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
+for data_path in data_paths[j]
+    @show data_path
+    outpath = data_path[1:end-4]*"-results.h5"
+    dataset = load_data_txt(data_path, true)
+
+    step_model = BNP_Step(B_max = 150)
+    model_initialized = true
+
+    # results = analyze(step_model, dataset, 1)
+
+    if model_initialized
+
+    results = analyze(step_model, dataset, 10)
+    model_initialized = false
+
+    else
+
+    results_snapshot = emit_results_snapshot(results)
+    step_model = BNP_Step(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
+    model_initialized = true
+
+    end
+    save_results(outpath,results)
+end
+# fig = visualize_results(results, dataset; plot_type="step")
+# display(fig)
+
+
+
 # visualize_results(results, dataset; plot_type="hist_step_height")
 # visualize_results(results, dataset; plot_type="hist_dwell_time")
 # visualize_results(results, dataset; plot_type="hist_emission")
