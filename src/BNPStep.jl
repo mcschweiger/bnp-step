@@ -115,11 +115,12 @@ end
 
 Load BNP-Step results from an HDF5 file.
 """
-function load_results(filename::String)::Dict{String, Any}
+function load_results(filename::String)::Dict{String, Vector}
     result = Dict{String, Any}()
     h5open(filename, "r") do file
         for key in keys(file)
-            result[key] = read(file[key])
+            resval = read(file[key])
+            result[key] = ndims(resval) == 1 ? vec(resval) : [resval[k, :] for k in axes(resval)[1]]
         end
     end
     return result

@@ -463,7 +463,7 @@ function calculate_logposterior(weak_limit, num_data, data_points, data_times,
     return log_posterior, log_likelihood
 end
 
-function emit_results_snapshot(results::Dict{String,Vector})
+function emit_results_snapshot(results::Dict)
 return Dict{String,Vector}(("b_m"=>results["b_m"][end],
 "h_m"=>results["h_m"][end],
 "f_bg"=>[results["f_bg"][end]],

@@ -7,32 +7,47 @@ using StatsBase
 j = parse(Int,ARGS[1])
 tracepaths = readdir("/home/max/codes/stepfind/washu-stl-traces",join=true)
 data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
-for data_path in data_paths[j]
-    @show data_path
-    outpath = data_path[1:end-4]*"-results.h5"
-    dataset = load_data_txt(data_path, true)
-
-    step_model = BNP_Step(B_max = 150)
-    model_initialized = true
-
-    # results = analyze(step_model, dataset, 1)
-
-    if model_initialized
-
-    results = analyze(step_model, dataset, 100000)
-    model_initialized = false
-
-    else
-
-    results_snapshot = emit_results_snapshot(results)
-    step_model = BNP_Step(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
-    model_initialized = true
-    results = analyze(step_model, dataset, 100000)
-    model_initialized = false
-    end
-    save_results(outpath,results)
+for j in eachindex(data_paths)
+    data_paths[j] = data_paths[j][endswith.(data_paths[j],".txt")]
 end
-# fig = visualize_results(results, dataset; plot_type="step")
+n_iters_segment = 10
+n_segments = 500
+
+for data_path in data_paths[j]
+    for seg in 1:n_segments
+        @show data_path
+        
+        dataset = load_data_txt(data_path, true)
+
+        step_model = BNP_Step(B_max = 150)
+        model_initialized = true
+
+        # results = analyze(step_model, dataset, 1)
+
+        if model_initialized
+
+        results = analyze(step_model, dataset, n_iters_segment)
+        model_initialized = false
+
+        else
+
+        results_snapshot = emit_results_snapshot(results)
+        step_model = BNP_Step(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
+        model_initialized = true
+        results = analyze(step_model, dataset, n_iters_segment)
+        model_initialized = false
+        end
+        outpath = data_path[1:end-4]*"-$seg-results.h5"
+        save_results(outpath,results)
+    end
+end
+data_path = "/home/max/codes/stepfind/washu-stl-traces/10mer_data_traces/Trk171_ns_13_drift_Qub.txt"
+outpath = data_path[1:end-4]*"-2-results.h5"
+        dataset = load_data_txt(data_path, true)
+
+# results_snapshot = Dict{String,Vector}(BNPStep.emit_results_snapshot(Dict{String,Any}(results)))
+results = BNPStep.load_results(outpath)
+fig = BNPStep.visualize_results(Dict{String,Vector}(results), dataset; plot_type="step")
 # display(fig)
 
 
