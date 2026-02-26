@@ -19,7 +19,7 @@ for data_path in data_paths[j]
 
     if model_initialized
 
-    results = analyze(step_model, dataset, 10)
+    results = analyze(step_model, dataset, 100000)
     model_initialized = false
 
     else
@@ -27,7 +27,8 @@ for data_path in data_paths[j]
     results_snapshot = emit_results_snapshot(results)
     step_model = BNP_Step(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
     model_initialized = true
-
+    results = analyze(step_model, dataset, 100000)
+    model_initialized = false
     end
     save_results(outpath,results)
 end
