@@ -4,8 +4,9 @@ include("/home/max/codes/stepfind/BNPStep/src/BNPStep.jl")
 using .BNPStep   # assuming visualize_results is part of this module
 using StatsBase
 
+homepath = ARGS[2]# = "/home/max/"
 j = parse(Int,ARGS[1])
-tracepaths = readdir("/home/max/codes/stepfind/washu-stl-traces",join=true)
+tracepaths = readdir(joinpath(homepath,"codes/stepfind/washu-stl-traces"),join=true)
 data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
 for j in eachindex(data_paths)
     data_paths[j] = data_paths[j][endswith.(data_paths[j],".txt")]
@@ -41,13 +42,13 @@ for data_path in data_paths[j]
         save_results(outpath,results)
     end
 end
-data_path = "/home/max/codes/stepfind/washu-stl-traces/10mer_data_traces/Trk171_ns_13_drift_Qub.txt"
-outpath = data_path[1:end-4]*"-2-results.h5"
-        dataset = load_data_txt(data_path, true)
+# data_path = "/home/max/codes/stepfind/washu-stl-traces/10mer_data_traces/Trk171_ns_13_drift_Qub.txt"
+# outpath = data_path[1:end-4]*"-2-results.h5"
+#         dataset = load_data_txt(data_path, true)
 
-# results_snapshot = Dict{String,Vector}(BNPStep.emit_results_snapshot(Dict{String,Any}(results)))
-results = BNPStep.load_results(outpath)
-fig = BNPStep.visualize_results(Dict{String,Vector}(results), dataset; plot_type="step")
+# # results_snapshot = Dict{String,Vector}(BNPStep.emit_results_snapshot(Dict{String,Any}(results)))
+# results = BNPStep.load_results(outpath)
+# fig = BNPStep.visualize_results(Dict{String,Vector}(results), dataset; plot_type="step")
 # display(fig)
 
 

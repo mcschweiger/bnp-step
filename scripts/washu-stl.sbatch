@@ -31,5 +31,5 @@ ls -lh .
 cd /scratch/mcschwei/codes/stepfind/bnp-step/ || { echo "scripts directory not found"; exit 1; }
 
 # Now just run the script (no need to instantiate or precompile)
-$JULIA_BIN --threads auto BNPStep_experiment.jl $SLURM_ARRAY_TASK_ID
+$JULIA_BIN --threads auto scripts/BNPStep_experiment.jl $SLURM_ARRAY_TASK_ID "/scratch/mcschwei/"
 
