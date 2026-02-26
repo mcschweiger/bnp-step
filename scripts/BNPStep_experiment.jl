@@ -1,10 +1,11 @@
 using Pkg
-Pkg.activate("/home/max/codes/stepfind/BNPStep/")
-include("/home/max/codes/stepfind/BNPStep/src/BNPStep.jl")
+homepath = ARGS[2]# = "/home/max/"
+bnpdir = joinpath(homepath,"codes/stepfind/", endswith(homepath,"max") ? "BNPStep/" : "bnp-step")
+Pkg.activate(bnpdir)
+include(joinpath(bnpdir,"src/BNPStep.jl"))
 using .BNPStep   # assuming visualize_results is part of this module
 using StatsBase
 
-homepath = ARGS[2]# = "/home/max/"
 j = parse(Int,ARGS[1])
 tracepaths = readdir(joinpath(homepath,"codes/stepfind/washu-stl-traces"),join=true)
 data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
