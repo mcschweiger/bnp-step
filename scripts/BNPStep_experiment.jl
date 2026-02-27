@@ -2,6 +2,7 @@ using Pkg
 homepath = ARGS[2]# = "/home/max/"
 bnpdir = joinpath(homepath,"codes/stepfind/", endswith(homepath,"max") ? "BNPStep/" : "bnp-step")
 Pkg.activate(bnpdir)
+Pkg.instantiate()
 include(joinpath(bnpdir,"src/BNPStep.jl"))
 using .BNPStep   # assuming visualize_results is part of this module
 using StatsBase
