@@ -30,6 +30,15 @@ ls -lh .
 # PEDRO: change this path to your BiFISH/scripts folder
 cd /scratch/mcschwei/codes/stepfind/bnp-step/ || { echo "scripts directory not found"; exit 1; }
 
-# Now just run the script (no need to instantiate or precompile)
-$JULIA_BIN --threads auto scripts/BNPStep_experiment.jl $SLURM_ARRAY_TASK_ID "/scratch/mcschwei/"
+# Put depot on fast local/shared scratch, unique per job
+export JULIA_DEPOT_PATH=/scratch/mcschwei/julia_depot/$SLURM_JOB_ID
+mkdir -p "$JULIA_DEPOT_PATH"
+
+# Optional: avoid Julia trying to auto-precompile in weird moments
+export JULIA_PKG_PRECOMPILE_AUTO=0
+PROJ=/scratch/mcschwei/codes/stepfind/bnp-step
+
+$JULIA_BIN --project=$PROJ -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+$JULIA_BIN --project=$PROJ --threads=auto scripts/BNPStep_experiment.jl $SLURM_ARRAY_TASK_ID "/scratch/mcschwei/"
+
 
