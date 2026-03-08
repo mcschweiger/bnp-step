@@ -1,10 +1,10 @@
 using Test
 using Pkg
 using Random
-using Revise
+# using Revise
 Pkg.activate(".")
 
-includet("../src/BNPStep.jl")
+include("../src/BNPStep.jl")
 using .BNPStep 
 
 @testset "BNP-Step Self-Consistency Test" begin
