@@ -1,6 +1,6 @@
 using Pkg
-homepath = ARGS[2]# = "/home/max/"
-bnpdir = joinpath(homepath,"codes/stepfind/", endswith(homepath,"max") ? "BNPStep/" : "bnp-step")
+homepath = "/home/max/"#ARGS[2]# = "/home/max/"
+bnpdir = joinpath(homepath,"codes/stepfind/", endswith(homepath,"max/") ? "BNPStep/" : "bnp-step")
 Pkg.activate(bnpdir)
 Pkg.instantiate()
 include(joinpath(bnpdir,"src/BNPStep.jl"))
@@ -8,6 +8,7 @@ using .BNPStep   # assuming visualize_results is part of this module
 using StatsBase
 
 j = parse(Int,ARGS[1])
+j=1
 tracepaths = readdir(joinpath(homepath,"codes/stepfind/washu-stl-traces"),join=true)
 data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
 for j in eachindex(data_paths)
@@ -16,11 +17,14 @@ end
 n_iters_segment = 10
 n_segments = 500
 
-for data_path in data_paths[j]
-    for seg in 1:n_segments
+# for data_path in data_paths[j]
+    data_path = "/home/max/codes/stepfind/washu-stl-traces/5mer_data_traces"
+    j = 1
+    # for seg in 1:n_segments
         @show data_path
+
         
-        dataset = load_data_txt(data_path, true)
+        dataset = load_data_txt(joinpath(data_path,"Trk150_10_ns_drift_Qub.txt"), true)
 
         step_model = BNP_Step(B_max = 150)
         model_initialized = true
@@ -33,6 +37,8 @@ for data_path in data_paths[j]
         model_initialized = false
 
         else
+        outpath = data_path[1:end-4]*"-$seg-results.h5"
+
 
         results_snapshot = emit_results_snapshot(results)
         step_model = BNP_Step(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
@@ -40,20 +46,61 @@ for data_path in data_paths[j]
         results = analyze(step_model, dataset, n_iters_segment)
         model_initialized = false
         end
-        outpath = data_path[1:end-4]*"-$seg-results.h5"
+
+        # outpath = data_path[1:end-4]*"-$seg-results.h5"
         save_results(outpath,results)
-    end
-end
+
+        outpath = data_path*"/Trk150_10_ns_drift_Qub-10-results.h5"
+        results = BNPStep.load_results(outpath)
+        segs = 20:10:170
+        for seg in segs
+            outpath = data_path*"/Trk150_10_ns_drift_Qub-$seg-results.h5"
+            results_seg = BNPStep.load_results(outpath)
+            for key in keys(results_seg)
+                results[key] = vcat(results[key],results_seg[key])
+            end
+        end
+        # end
+# end
 # data_path = "/home/max/codes/stepfind/washu-stl-traces/10mer_data_traces/Trk171_ns_13_drift_Qub.txt"
 # outpath = data_path[1:end-4]*"-2-results.h5"
 #         dataset = load_data_txt(data_path, true)
 
 # # results_snapshot = Dict{String,Vector}(BNPStep.emit_results_snapshot(Dict{String,Any}(results)))
 # results = BNPStep.load_results(outpath)
-# fig = BNPStep.visualize_results(Dict{String,Vector}(results), dataset; plot_type="step")
-# display(fig)
+fig = BNPStep.visualize_results(Dict{String,Vector}(results), dataset; plot_type="step", font_size = 32)
+
+keys(results)
 
 
+display(fig)
+t_n = dataset["times"]
+signal_n = []
+for s in eachindex(results["posterior"])
+push!(signal_n, BNPStep.reconstruct_signal_from_sample(
+           results["b_m"][s],
+           results["h_m"][s],
+           results["t_m"][s],
+           results["dt"][s],
+           results["f_bg"][s],
+           kernel,
+           t_n
+       ))
+end
+
+
+dsignal = diff.(signal_n)
+dsignal_flag = [dsig.>0 for dsig in dsignal]
+befores = []
+afters = []
+for (flags, signal) in zip(dsignal_flag, signal_n)
+    for ind in findall(flags)
+        push!(befores,signal[ind])
+        push!(afters,signal[ind+1])
+    end
+
+end 
+hist2
 
 # visualize_results(results, dataset; plot_type="hist_step_height")
 # visualize_results(results, dataset; plot_type="hist_dwell_time")
@@ -95,4 +142,5 @@ end
 # axislegend(ax; position = (:right, :bottom))
 # ax.xlabel = "log10(#Datapoints)"
 # ax.ylabel = "log10(wall time per 100 iterations [seconds])"
-# display(fig)
+# display(fig)        outpath = data_path[1:end-4]*"-$seg-results.h5"
+results = BNPStep.load_results(outpath)

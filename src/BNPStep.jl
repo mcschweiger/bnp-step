@@ -21,13 +21,13 @@ using LinearAlgebra
 using DelimitedFiles  # Required for reading files
 using StatsBase  # For statistical operations
 
-using GLMakie      # For visualization
+# using GLMakie      # For visualization
 using Distributions  # For sampling distributions
 
 
 
 using HDF5
-using GLMakie
+# using GLMakie
 using Random, HDF5
 
 """
