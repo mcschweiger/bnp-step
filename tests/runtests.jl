@@ -17,7 +17,7 @@ using .BNPStep
     dataset = Dict("data" => data, "times" => Float32.(t))
 
     # Run BNP-Step with minimal iterations
-    step_model = BNP_Step(gamma=1.0f0, B_max=20)
+    step_model = BNP_Step_(gamma=1.0f0, B_max=20)
     results = analyze(step_model, dataset, 100)
 
     # Save and reload results using actual HDF5 I/O

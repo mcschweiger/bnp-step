@@ -17,16 +17,16 @@ end
 n_iters_segment = 10
 n_segments = 500
 
-# for data_path in data_paths[j]
-    data_path = "/home/max/codes/stepfind/washu-stl-traces/5mer_data_traces"
-    j = 1
-    # for seg in 1:n_segments
+for data_path in data_paths[j]
+    # data_path = "/home/max/codes/stepfind/washu-stl-traces/5mer_data_traces"
+    # j = 1
+    for seg in 1:n_segments
         @show data_path
 
         
         dataset = load_data_txt(joinpath(data_path,"Trk150_10_ns_drift_Qub.txt"), true)
 
-        step_model = BNP_Step(B_max = 150)
+        step_model = BNP_Step_(B_max = 150)
         model_initialized = true
 
         # results = analyze(step_model, dataset, 1)
@@ -37,19 +37,28 @@ n_segments = 500
         model_initialized = false
 
         else
-        outpath = data_path[1:end-4]*"-$seg-results.h5"
+        # outpath = data_path[1:end-4]*"-$seg-results.h5"
 
 
         results_snapshot = emit_results_snapshot(results)
-        step_model = BNP_Step(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
+        step_model = BNP_Step_(B_max=150,truth = Dict{String,Any}(results_snapshot), init_temperature=1,load_initialization = :ground_truth)
         model_initialized = true
         results = analyze(step_model, dataset, n_iters_segment)
         model_initialized = false
         end
 
-        # outpath = data_path[1:end-4]*"-$seg-results.h5"
+        outpath = data_path[1:end-4]*"-$seg-results.h5"
         save_results(outpath,results)
 
+    end
+end
+# data_path = "/home/max/codes/stepfind/washu-stl-traces/10mer_data_traces/Trk171_ns_13_drift_Qub.txt"
+# outpath = data_path[1:end-4]*"-2-results.h5"
+#         dataset = load_data_txt(data_path, true)
+
+# # results_snapshot = Dict{String,Vector}(BNPStep.emit_results_snapshot(Dict{String,Any}(results)))
+# results = BNPStep.load_results(outpath)
+if false
         outpath = data_path*"/Trk150_10_ns_drift_Qub-10-results.h5"
         results = BNPStep.load_results(outpath)
         segs = 20:10:170
@@ -60,14 +69,7 @@ n_segments = 500
                 results[key] = vcat(results[key],results_seg[key])
             end
         end
-        # end
-# end
-# data_path = "/home/max/codes/stepfind/washu-stl-traces/10mer_data_traces/Trk171_ns_13_drift_Qub.txt"
-# outpath = data_path[1:end-4]*"-2-results.h5"
-#         dataset = load_data_txt(data_path, true)
 
-# # results_snapshot = Dict{String,Vector}(BNPStep.emit_results_snapshot(Dict{String,Any}(results)))
-# results = BNPStep.load_results(outpath)
 fig = BNPStep.visualize_results(Dict{String,Vector}(results), dataset; plot_type="step", font_size = 32)
 
 keys(results)
@@ -101,7 +103,7 @@ for (flags, signal) in zip(dsignal_flag, signal_n)
 
 end 
 hist2
-
+end
 # visualize_results(results, dataset; plot_type="hist_step_height")
 # visualize_results(results, dataset; plot_type="hist_dwell_time")
 # visualize_results(results, dataset; plot_type="hist_emission")

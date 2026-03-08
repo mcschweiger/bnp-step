@@ -14,7 +14,7 @@ dataset, truth = simulate_and_save_ground_truth("/tmp/synthetic_data_"*string(N_
 
 # Use the output "truth" dictionary to instantiate the sampler context
 step_model = BNP_Step_from_ground_truth(truth)
-step_model = BNP_Step()
+step_model = BNP_Step_()
 
 # Run 
 results = analyze(step_model, dataset, 3000)

@@ -190,7 +190,7 @@ Constructor for the BNPStep structure with default values.
 - `scale_factor::Float32`: Default is 1.25.
 - `seed::Union{Int, Nothing}`: Default is nothing.
 """
-function BNP_Step(; chi =0.028, 
+function BNP_Step_(; chi =0.028, 
                 dt_ref  =100.0, 
                 h_ref   =10.0,
                 psi     =0.0028,
@@ -593,7 +593,7 @@ end
 Construct a BNP_Step instance using values from a ground truth dictionary.
 """
 function BNP_Step_from_ground_truth(truth::Dict{String,Any})
-    return BNP_Step(
+    return BNP_Step_(
         chi = 0.001f0,
         dt_ref = truth["dt"],
         h_ref = mean(vcat(truth["h_m"]...)),
@@ -626,7 +626,7 @@ export save_results, load_results, visualize_results, load_data,
 export load_data_garcia, load_data_txt, load_data_csv,
  load_data_HMM, load_data_expt, load_data_kv, reconstruct_signal_from_trace
 export sample_b, sample_fh, sample_t, sample_eta_metropolis, sample_dt_metropolis, 
- calculate_loglikelihood, calculate_logposterior, emit_results_snapshot
+ calculate_loglikelihood, calculate_logposterior, emit_results_snapshot, BNP_Step_
 
 
 end  # module BNPStep
