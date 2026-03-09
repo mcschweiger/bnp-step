@@ -8,11 +8,10 @@ using .BNPStep   # assuming visualize_results is part of this module
 using StatsBase
 
 j = parse(Int,ARGS[1])
-j=1
 tracepaths = readdir(joinpath(homepath,"codes/stepfind/washu-stl-traces"),join=true)
 data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
-for j in eachindex(data_paths)
-    data_paths[j] = data_paths[j][endswith.(data_paths[j],".txt")]
+for jj in eachindex(data_paths)
+    data_paths[jj] = data_paths[jj][endswith.(data_paths[j],".txt")]
 end
 n_iters_segment = 10
 n_segments = 500
@@ -24,7 +23,7 @@ for data_path in data_paths[j]
         @show data_path
 
         
-        dataset = load_data_txt(joinpath(data_path,"Trk150_10_ns_drift_Qub.txt"), true)
+        dataset = load_data_txt(data_path, true)
 
         step_model = BNP_Step_(B_max = 150)
         model_initialized = true
