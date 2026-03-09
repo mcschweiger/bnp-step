@@ -9,9 +9,9 @@ using StatsBase
 
 j = parse(Int,ARGS[1])
 tracepaths = readdir(joinpath(homepath,"codes/stepfind/washu-stl-traces"),join=true)
-data_paths = [readdir(tracepaths[j],join=true) for j in eachindex(tracepaths)]
+data_paths = [readdir(tracepaths[jj],join=true) for jj in eachindex(tracepaths)]
 for jj in eachindex(data_paths)
-    data_paths[jj] = data_paths[jj][endswith.(data_paths[j],".txt")]
+    data_paths[jj] = data_paths[jj][endswith.(data_paths[jj],".txt")]
 end
 n_iters_segment = 10
 n_segments = 500
