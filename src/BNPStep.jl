@@ -35,7 +35,7 @@ using Random, HDF5
 
 Simulates synthetic step data with ground truth parameters, saves to `filename`, and returns the dataset and ground truth dictionary.
 """
-function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=50, noise_level::Float32=0.25f0)
+function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=50, noise_level::Float32=0.25f0, write_data::Bool = true)
     t = collect(1:N)
     t_f32 = Float32.(t)
 
@@ -54,9 +54,11 @@ function simulate_and_save_ground_truth(filename::String; N::Int=10000, B::Int=5
     noise = noise_level .* randn(Float32, N)
     data = signal .+ noise
 
-    h5open(filename, "w") do file
-        file["data"] = data
-        file["times"] = t_f32
+    if write_data
+        h5open(filename, "w") do file
+            file["data"] = data
+            file["times"] = t_f32
+        end
     end
 
     dataset = Dict("data" => data, "times" => t_f32)
@@ -206,7 +208,7 @@ function BNP_Step_(; chi =0.028,
                 rng=nothing, 
                 truth=nothing)
     rng = isnothing(rng) ? Random.GLOBAL_RNG : MersenneTwister(rng)
-    truth = isnothing(truth) ? simulate_and_save_ground_truth("/home/max/codes/trash.h5")[2] : truth
+    truth = isnothing(truth) ? simulate_and_save_ground_truth("";write_data=false)[2] : truth
     return BNP_Step(chi, dt_ref, h_ref, psi, F_ref, phi, eta_ref, gamma, B_max,
                    load_initialization, use_annealing, init_temperature, scale_factor, rng, truth)
 end
