@@ -1,5 +1,5 @@
 using Pkg
-homepath = "/home/max/"#ARGS[2]# = "/home/max/"
+homepath = ARGS[2]# = "/home/max/""/home/max/"#
 bnpdir = joinpath(homepath,"codes/stepfind/", endswith(homepath,"max/") ? "BNPStep/" : "bnp-step")
 Pkg.activate(bnpdir)
 Pkg.instantiate()
@@ -145,4 +145,4 @@ end
 # ax.xlabel = "log10(#Datapoints)"
 # ax.ylabel = "log10(wall time per 100 iterations [seconds])"
 # display(fig)        outpath = data_path[1:end-4]*"-$seg-results.h5"
-results = BNPStep.load_results(outpath)
+# results = BNPStep.load_results(outpath)
