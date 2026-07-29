@@ -321,96 +321,6 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
     return results
 end
 
-"""
-    visualize_results(results::Dict, data::Dict; plot_type::String="step", font_size::Int=16, datacolor::Symbol=:gray, learncolor::Symbol=:orange)
-
-Visualizes the results of BNP-Step analysis.
-
-# Arguments
-- `results::Dict`: Dictionary containing the results of the analysis.
-- `data::Dict`: Dictionary containing the dataset with keys "data" and "times".
-- `plot_type::String`: Type of plot to generate. Default is "step".
-- `font_size::Int`: Font size for plot labels. Default is 16.
-- `datacolor::Symbol`: Color for the data plot. Default is :gray.
-- `learncolor::Symbol`: Color for the learned steps plot. Default is :orange.
-"""
-
-function visualize_results(results::Dict, data::Dict; 
-    plot_type::String="step", font_size::Int=16, datacolor::Symbol=:gray, 
-    learncolor::Symbol=:orange, truth=nothing)
-
-    if plot_type != "step"
-        @warn "Only 'step' plot type is supported in Makie rewrite."
-        return
-    end
-
-    data_points = data["data"]
-    t_n = data["times"]
-
-    b_m, h_m, t_m = results["b_m"], results["h_m"], results["t_m"]
-    f_bg, dt, posterior = results["f_bg"], results["dt"], results["posterior"]
-
-    map_idx = argmax(posterior)
-    last_idx = length(posterior)
-
-    step_map = reconstruct_signal_from_sample(b_m[map_idx], h_m[map_idx], t_m[map_idx], dt[map_idx], f_bg[map_idx], kernel, t_n)
-    step_last = last_idx != map_idx ? reconstruct_signal_from_sample(b_m[last_idx], h_m[last_idx], t_m[last_idx], dt[last_idx], f_bg[last_idx], kernel, t_n) : nothing
-
-    topK = min(100, length(posterior))
-    top_inds = partialsortperm(posterior, rev=true, 1:topK)
-    traces = [reconstruct_signal_from_sample(b_m[i], h_m[i], t_m[i], dt[i], f_bg[i], kernel, t_n) for i in top_inds]
-    T = repeat(t_n', topK, 1)
-    S = hcat(traces...)'
-    # === Pointwise credible intervals across samples
-    q05 = [quantile(view(S, :, j), 0.05) for j in 1:size(S, 2)]
-    q50 = [quantile(view(S, :, j), 0.50) for j in 1:size(S, 2)]
-    q95 = [quantile(view(S, :, j), 0.95) for j in 1:size(S, 2)]
-    # === Setup grid
-    nbins_t = length(t_n) ÷ 4
-    nbins_s = 100
-
-    t_edges = range(minimum(t_n), stop=maximum(t_n), length=nbins_t + 1)
-    s_edges = range(minimum(S), stop=maximum(S), length=nbins_s + 1)
-
-    # Bin manually to avoid axis mismatch
-    heatmap_img = zeros(Float32, nbins_s, nbins_t)  # rows = signal, cols = time
-
-    for i in 1:topK
-        for j in 1:length(t_n)
-            t_val, s_val = T[i, j], S[i, j]
-
-            t_bin = searchsortedfirst(t_edges, t_val) - 1
-            s_bin = searchsortedfirst(s_edges, s_val) - 1
-
-            if t_bin ∈ 1:nbins_t && s_bin ∈ 1:nbins_s
-                heatmap_img[s_bin, t_bin] += 1
-            end
-        end
-    end
-
-    heatmap_img ./= maximum(heatmap_img)
-    fig = Figure(size=(1000, 600), fontsize=font_size)
-    ax = Axis(fig[1, 1], xlabel="Time", ylabel="Signal", title="BNP-Step Trajectory Posterior")
-   
-    # heatmap!(ax, t_edges, s_edges, heatmap_img'; colormap=:blues, alpha=0.4, interpolate=false)
-    # (already have) heatmap!(ax, t_edges, s_edges, heatmap_img'; colormap=:blues, alpha=0.4, interpolate=false)
-
-    # 90% credible band (5–95%) and median
-    band!(ax, t_n, q05, q95, color=(learncolor, 0.20), label = "90% CI")  # light fill
-    lines!(ax, t_n, q50, color=learncolor, linestyle=:dot, linewidth=2, label="Median (50%)")
-    lines!(ax, t_n, data_points, color=datacolor, label="Data")
-    lines!(ax, t_n, step_map, color=learncolor, linewidth=2.0, label="Steps (MAP)")
-    if step_last !== nothing
-        lines!(ax, t_n, step_last, color=:blue, linestyle=:dash, label="Steps (Last Sample)")
-    end
-    if truth !== nothing
-        gt = reconstruct_signal(t_n, truth["b_m"], truth["h_m"], truth["t_m"], truth["dt"], truth["f_bg"], kernel)
-        lines!(ax, t_n, gt, color=:green, linestyle=:dot, linewidth=2.0, label="Ground Truth")
-    end
-
-    axislegend(ax)
-    return fig
-end
 # function visualize_results(results::Dict, data::Dict; plot_type::String="step", font_size::Int=16,
 #     datacolor::Symbol=:gray, learncolor::Symbol=:orange, truth=nothing)
     
@@ -622,7 +532,7 @@ function BNP_Step_from_ground_truth(truth::Dict{String,Any})
 end
 
 
-export save_results, load_results, visualize_results, load_data,
+export save_results, load_results, load_data,
  AbstractStep, BNP_Step, analyze, kernel, simulate_and_save_ground_truth,
  BNP_Step_from_ground_truth, reconstruct_signal_from_trace
 export load_data_garcia, load_data_txt, load_data_csv,
