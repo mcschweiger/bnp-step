@@ -213,7 +213,7 @@ function BNP_Step_(; chi =0.028,
                    load_initialization, use_annealing, init_temperature, scale_factor, rng, truth)
 end
 
-function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
+function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000; freeze_loads::Bool=false, freeze_eta::Union{Float32,Bool}=true)
     # === Validate input data
     if !haskey(data, "data") || !haskey(data, "times")
         error("Dataset must contain 'data' and 'times' keys.")
@@ -239,11 +239,19 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
             # === Initialize traces (each as a Vector of previous samples)
 
     else
-        b_m = trues(_step.B_max)
+        if freeze_loads
+            b_m = falses(_step.B_max)
+        else
+            b_m = trues(_step.B_max)
+        end
         h_m = rand(Normal(_step.h_ref, sqrt(1 / _step.chi)), _step.B_max)
         t_m = rand(t_n, _step.B_max)
         f_bg = rand(Normal(_step.F_ref, sqrt(1 / _step.psi)))
-        eta = rand(Gamma(_step.eta_ref / _step.phi, _step.phi))
+        if freeze_eta
+            eta = 8.079808
+        else
+            eta = rand(Gamma(_step.eta_ref / _step.phi, _step.phi))
+        end
         dt = rand(Gamma(_step.dt_ref / _step.chi, _step.chi))
         # === Initialize traces (each as a Vector of previous samples)
 
@@ -284,26 +292,36 @@ function analyze(_step::AbstractStep, data::Dict, num_samples::Int=50000)
         push!(h_m_trace, h_m)
         push!(results["f_bg"], f_bg)
         push!(f_bg_trace, f_bg)
-
-        b_m = sample_b(_step.B_max, num_data, data_points, t_n, b_m_trace, h_m_trace, t_m_trace, dt_trace,
-                       f_bg_trace, eta_trace, nu_vec, _step.gamma, _step.rng, temp, kernel)
+        if freeze_loads
+            b_m = falses(_step.B_max)
+        else
+            b_m = sample_b(_step.B_max, num_data, data_points, t_n, b_m_trace, h_m_trace, t_m_trace, dt_trace,
+                        f_bg_trace, eta_trace, nu_vec, _step.gamma, _step.rng, temp, kernel)
+        end
         push!(results["b_m"], b_m)
         push!(b_m_trace, b_m)
 
-        t_m = sample_t(_step.B_max, num_data, data_points, t_n, b_m_trace, h_m_trace, t_m_trace, dt_trace,
+        if !freeze_loads 
+            t_m = sample_t(_step.B_max, num_data, data_points, t_n, b_m_trace, h_m_trace, t_m_trace, dt_trace,
                        f_bg_trace, eta_trace, nu_vec, _step.rng, temp, kernel)
+        end
         push!(results["t_m"], t_m)
         push!(t_m_trace, t_m)
-
-        eta = sample_eta_metropolis(eta_trace, nu_vec, _step.B_max, num_data, data_points, t_n,
-                                     b_m_trace, h_m_trace, t_m_trace, dt_trace, f_bg_trace,
-                                     _step.phi, _step.eta_ref, _step.rng, temp, kernel)
+        if freeze_eta
+            eta = 8.079808
+        else
+            eta = sample_eta_metropolis(eta_trace, nu_vec, _step.B_max, num_data, data_points, t_n,
+                                        b_m_trace, h_m_trace, t_m_trace, dt_trace, f_bg_trace,
+                                        _step.phi, _step.eta_ref, _step.rng, temp, kernel)
+        end
         push!(results["eta"], eta)
         push!(eta_trace, eta)
 
-        dt = sample_dt_metropolis(eta_trace, nu_vec, _step.B_max, num_data, data_points, t_n,
+        if !freeze_loads 
+            dt = sample_dt_metropolis(eta_trace, nu_vec, _step.B_max, num_data, data_points, t_n,
                                    b_m_trace, h_m_trace, t_m_trace, dt_trace, f_bg_trace,
                                    _step.chi, _step.dt_ref, _step.rng, temp, kernel)
+        end
         push!(results["dt"], dt)
         push!(dt_trace, dt)
 
